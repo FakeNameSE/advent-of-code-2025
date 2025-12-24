@@ -1,0 +1,27 @@
+(lang dune 3.7)
+
+(name ocaml_solution)
+
+(generate_opam_files true)
+
+(source
+ (github FakeNameSE/advent-of-code-2025))
+
+(authors "FakeNameSE")
+
+(maintainers "FakeNameSE")
+
+(license MIT)
+
+; (documentation https://url/to/documentation)
+
+(package
+ (name ocaml_solution)
+ (synopsis "Solution to Day 5 of Advent of Code 2025.")
+ (description "Solution to Day 5 of Advent of Code 2025.")
+ (depends ocaml dune)
+;  (tags
+;   (topics "to describe" your project))
+  )
+
+; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
