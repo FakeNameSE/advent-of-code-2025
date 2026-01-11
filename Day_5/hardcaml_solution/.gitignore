@@ -1,0 +1,6 @@
+_build
+*.install
+*.merlin
+_opam
+test/inputs/sample_input.txt
+test/inputs/input.txt

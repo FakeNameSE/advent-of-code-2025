@@ -1,0 +1,25 @@
+(lang dune 3.17)
+
+(name hardcaml_advent_of_code_day_5)
+
+(source
+ (github FakeNameSE/advent-of-code-2025))
+
+(license MIT)
+
+(authors "FakeNameSE")
+
+(package
+ (name hardcaml_advent_of_code_day_5)
+ (synopsis "Solution to Advent of Code 2025, Day 5, Part 1 in Hardcaml")
+ (description
+  "A simple weekend project including a hardcaml design, testbench, and RTL generation to introduce myself to Hardcaml.")
+ (depends
+  (ocaml (>= "5.1.0"))
+  core
+  hardcaml
+  hardcaml_test_harness
+  hardcaml_waveterm
+  re))
+
+(generate_opam_files)

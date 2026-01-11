@@ -1,0 +1,13 @@
+(library
+ (name hardcaml_advent_of_code_day_5_test)
+ (libraries
+  core
+  hardcaml
+  hardcaml_advent_of_code_day_5
+  hardcaml_test_harness
+  hardcaml_waveterm
+  re)
+ (preprocess
+  (pps ppx_hardcaml ppx_jane))
+ (inline_tests
+  (deps ./inputs/input.txt)))
