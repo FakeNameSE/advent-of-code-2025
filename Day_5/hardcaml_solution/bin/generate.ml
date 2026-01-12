@@ -6,6 +6,7 @@ module Top = Hardcaml_advent_of_code_day_5.Top.Make (struct
     let id_width = 64
     let id_mem_size_in_ids = 2000
     let id_range_mem_size_in_ranges = 500
+    let num_execution_units = 8
   end)
 
 let generate_top_rtl () =

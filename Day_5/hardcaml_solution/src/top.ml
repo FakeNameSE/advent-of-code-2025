@@ -8,6 +8,7 @@ module type Config = sig
   val id_width : int
   val id_mem_size_in_ids : int
   val id_range_mem_size_in_ranges : int
+  val num_execution_units : int
 end
 
 module Make (Config : Config) = struct
@@ -27,8 +28,8 @@ module Make (Config : Config) = struct
   end
 
   module O = struct
-    (* TODO: Set output counter to the minimum number of bits required to represent all of the ids. 
-    Consider setting it to the next power of two up if that would play nicer with the hardware target.  *)
+    (* TODO: Output counter is currently sized to the minimum number of bits required to represent all of the ids. 
+    Consider setting it to the next power of two up if that would play nicer with the hardware target. *)
     type 'a t = { num_ids_in_range : 'a With_valid.t [@bits num_ids_in_range_size] }
     [@@deriving hardcaml]
   end
@@ -49,8 +50,7 @@ module Make (Config : Config) = struct
   let create scope (i : _ I.t) : _ O.t =
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
     let fetch_next_id = wire 1 in
-    let%hw execution_units_ready = wire 2 in
-    let%hw execution_unit_enables_wire = wire 2 in
+    let%hw execution_units_ready = wire Config.num_execution_units in
     (* Use this circuit from hardcaml_circuits to pick the next available execution unit to use. 
     Takes a bit vector of available execution units and returns a one hot encoding with that bit corresponding to one of the available ones. *)
     let Onehot_clean.
@@ -81,7 +81,7 @@ module Make (Config : Config) = struct
       ; write_data = zero Config.id_width
       }
     in
-    (* TODO: Parameterize size of this, intelligently break up according to block size. *)
+    (* TODO: Intelligently break up according to block size. *)
     let id_ram =
       (Ram.create
          ~name:"id_ram"
@@ -125,16 +125,18 @@ module Make (Config : Config) = struct
          ~read_ports:[| id_range_ram_read_port |])
         ()
     in
-    Signal.(execution_unit_enables_wire <-- execution_unit_enables);
     let%hw fetched_id_range = id_range_ram.(0) in
     let lower, upper = split_in_half_msb fetched_id_range in
-    let execution_unit_1 =
+    (* Stamp out the configured number of execution units and wire them up. *)
+    let create_execution_unit exec_unit_idx =
       Execution_unit.hierarchical
         scope
         { Execution_unit.I.clock = i.clock
         ; clear = i.clear
         ; enable =
-            i.enable &: ~:(id_fetcher.all_ids_fetched) &: execution_unit_enables_wire.:(0)
+            i.enable
+            &: ~:(id_fetcher.all_ids_fetched)
+            &: execution_unit_enables.:(exec_unit_idx)
         ; id = { With_valid.valid = id_fetcher.id_is_valid; value = fetched_id }
         ; id_range =
             { valid = id_range_fetcher.id_range_is_valid
@@ -142,43 +144,25 @@ module Make (Config : Config) = struct
             }
         }
     in
-    let execution_unit_2 =
-      Execution_unit.hierarchical
-        scope
-        { Execution_unit.I.clock = i.clock
-        ; clear = i.clear
-        ; enable =
-            i.enable &: ~:(id_fetcher.all_ids_fetched) &: execution_unit_enables_wire.:(1)
-        ; id = { With_valid.valid = id_fetcher.id_is_valid; value = fetched_id }
-        ; id_range =
-            { valid = id_range_fetcher.id_range_is_valid
-            ; value = { lower; upper; idx = id_range_fetcher.curr_id_range_idx }
-            }
-        }
-    in
-    Signal.(execution_units_ready <-- execution_unit_2.ready @: execution_unit_1.ready);
+    let execution_units = List.init Config.num_execution_units ~f:create_execution_unit in
+    Signal.(
+      execution_units_ready
+      <-- concat_lsb (List.map execution_units ~f:(fun exec_unit -> exec_unit.ready)));
     let execution_units_in_range =
-      [ execution_unit_1.is_in_range; execution_unit_2.is_in_range ]
+      List.map execution_units ~f:(fun exec_unit -> exec_unit.is_in_range)
     in
     Signal.(fetch_next_id <-- (any_execution_unit_ready &: i.enable));
-    (* 0,0    1,0   1,1    1,1 *)
     (* TODO: Parameterize arity? *)
     (* TODO: More intelligently build adder tree with different bit widths at each level. *)
-    (* TODO: Parameterize width of increment counter. *)
-    (* TODO: Explain why this works. *)
     (* Compute the number of ids we found in range this cycle. *)
+    (* The final stage in our pipeline is adding the number of ids found in range this cycle by all of our execution units.
+    First, we and each result with its valid bit to mask out those which are not ready, 
+    then we use an adder tree to add all of these bits up, resizing the counter to avoid overflow. *)
     let%hw next_num_ids_in_range_increment =
       List.map execution_units_in_range ~f:(fun With_valid.{ valid; value } ->
-        uresize ~width:(num_bits_to_represent 2) (valid &: value))
+        uresize ~width:(num_bits_to_represent Config.num_execution_units) (valid &: value))
       |> tree ~arity:4 ~f:(reduce ~f:( +: ))
     in
-    (* let next_num_ids_in_range old_num_ids_in_range =
-      mux
-        (execution_unit_1.is_in_range.valid &: execution_unit_1.is_in_range.value)
-        [ old_num_ids_in_range
-        ; old_num_ids_in_range
-          +: uresize ~width:(width old_num_ids_in_range) next_num_ids_in_range_increment
-        ] *)
     let next_num_ids_in_range old_num_ids_in_range =
       old_num_ids_in_range
       +: uresize ~width:(width old_num_ids_in_range) next_num_ids_in_range_increment

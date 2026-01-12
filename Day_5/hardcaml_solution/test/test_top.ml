@@ -9,6 +9,7 @@ module Top = Hardcaml_advent_of_code_day_5.Top.Make (struct
     let id_width = 64
     let id_mem_size_in_ids = 2000
     let id_range_mem_size_in_ranges = 500
+    let num_execution_units = 128
   end)
 
 module Sim = Cyclesim.With_interface (Top.I) (Top.O)
@@ -74,7 +75,7 @@ let testbench (sim : Sim.t) : Waveform.t =
     Cyclesim.cycle sim;
     num_cycles := !num_cycles + 1
   done;
-  
+
   (* Wait one more cycle to be safe. *)
   Cyclesim.cycle sim;
   printf

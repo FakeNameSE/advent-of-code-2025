@@ -8,6 +8,7 @@ module type Config = sig
   val id_width : int
   val id_mem_size_in_ids : int
   val id_range_mem_size_in_ranges : int
+  val num_execution_units : int
 end
 
 module Make (_ : Config) : sig
