@@ -1,5 +1,7 @@
 (** An execution unit that checks if a given ID falls within any ID ranges. This design
-    assumes that it is being fed a new range to check every cycle *)
+    assumes that it is being fed a new range to check every cycle. It handles stalls on
+    ranges and IDs not being valid, and will drop the ready signal as it computes starting
+    the cycle after its enable is high. *)
 
 open! Core
 open! Hardcaml

@@ -14,6 +14,7 @@ module Make (Config : Config) = struct
       { clock : 'a
       ; clear : 'a
       ; enable : 'a
+      ; max_id_idx : 'a [@bits Config.id_address_size]
       }
     [@@deriving hardcaml]
   end
@@ -30,30 +31,29 @@ module Make (Config : Config) = struct
     [@@deriving hardcaml]
   end
 
-  (* TODO: Parameterize with a functor instead of hardcoding. *)
-  let max_id_idx = 999
-
   let create scope (i : _ I.t) : _ O.t =
     let spec = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
     (* Our reads are synchronous, so we need to wait a cycle before the first valid data comes out. *)
     let%hw first_read_is_ready = pipeline ~n:1 spec vdd in
     let open Always in
-    (* TODO: Parameterize number of bits for number of ids. *)
     let%hw_var id_idx = Variable.reg spec ~width:Config.id_address_size in
     let%hw_var next_id_idx = Variable.wire ~default:id_idx.value () in
     let%hw_var all_ids_fetched = Variable.reg spec ~width:1 in
     let%hw_var next_all_ids_fetched = Variable.wire ~default:all_ids_fetched.value () in
+    let%hw_var max_id_idx_reg = Variable.reg spec ~width:(width i.max_id_idx) in
+    let%hw_var max_id_idx_reg_is_valid = Variable.reg spec ~width:1 in
+    let%hw circuit_initialized = first_read_is_ready &: max_id_idx_reg_is_valid.value in
     compile
       [ (* Could consider moving this guard to shave some gate delay, 
     but ultimately we do not want to adjust our counter until the memory is outputting valid date. *)
         when_
-          first_read_is_ready
+          circuit_initialized
           [ if_
               all_ids_fetched.value
               (* Once set, stay set until reset. *)
               [ next_all_ids_fetched <-- vdd ]
               [ if_
-                  (i.enable &: (id_idx.value ==:. max_id_idx))
+                  (i.enable &: (id_idx.value ==: max_id_idx_reg.value))
                   [ next_all_ids_fetched <-- vdd ]
                   [ next_all_ids_fetched <-- gnd ]
               ]
@@ -66,6 +66,11 @@ module Make (Config : Config) = struct
           ; id_idx <-- next_id_idx.value
           ; all_ids_fetched <-- next_all_ids_fetched.value
           ]
+        (* Lock in the maximum index on the first enable. 
+        We use the valid signal from this in part to determine when this module has been properly initialized.  *)
+      ; when_
+          (i.enable &: ~:(max_id_idx_reg_is_valid.value))
+          [ max_id_idx_reg <-- i.max_id_idx; max_id_idx_reg_is_valid <-- vdd ]
       ];
     (* Plumb wires to output. 
     
@@ -76,7 +81,7 @@ module Make (Config : Config) = struct
     { O.read_clock = i.clock
     ; read_address = next_id_idx.value
     ; read_enable = vdd
-    ; id_is_valid = first_read_is_ready
+    ; id_is_valid = circuit_initialized
     ; all_ids_fetched = all_ids_fetched.value
     }
   ;;

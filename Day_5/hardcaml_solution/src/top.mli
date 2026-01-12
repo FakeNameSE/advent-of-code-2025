@@ -15,6 +15,9 @@ module Make (_ : Config) : sig
     type 'a t =
       { clock : 'a
       ; clear : 'a
+      ; enable : 'a
+      ; max_id_idx : 'a
+      ; max_id_range_idx : 'a
       }
     [@@deriving hardcaml]
   end

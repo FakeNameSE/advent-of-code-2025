@@ -2,8 +2,14 @@
  (modes byte exe)
  (public_names hardcaml_solution)
  (names generate)
- (libraries core.command core_unix.command_unix core core_unix hardcaml
-   hardcaml_advent_of_code_day_5 jane_rope)
+ (libraries
+  core.command
+  core_unix.command_unix
+  core
+  core_unix
+  hardcaml
+  hardcaml_advent_of_code_day_5
+  jane_rope)
  (preprocess
   (pps ppx_jane))
  (promote))

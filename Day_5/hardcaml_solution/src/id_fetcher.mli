@@ -4,6 +4,9 @@
     instruction is just an ID to check. Much like x86, read_address will always point to
     the next ID to process.
 
+    This module will store max_id_idx the first clock cycle enable is high and keep using
+    this value until it clear is high (or possibly reset).
+
     For example, this module starts by pointing at the ID at index 0, which will be the
     next ID to check. When enable is high, this module advances to the next ID (idx 1 in
     this case). Note that because this assumes the memory we are controlling is
@@ -27,6 +30,7 @@ module Make (_ : Config) : sig
       { clock : 'a
       ; clear : 'a
       ; enable : 'a
+      ; max_id_idx : 'a
       }
     [@@deriving hardcaml]
   end
@@ -42,6 +46,5 @@ module Make (_ : Config) : sig
     [@@deriving hardcaml]
   end
 
-  val max_id_idx : int
   val hierarchical : Scope.t -> Signal.t I.t -> Signal.t O.t
 end

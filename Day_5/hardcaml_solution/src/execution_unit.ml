@@ -61,10 +61,8 @@ module Make (Config : Config) = struct
      DSL. *)
     let%hw_var id = Variable.reg spec ~width:(width i.id.value) in
     let%hw_var init_range_idx = Variable.reg spec ~width:(width i.id_range.value.idx) in
-    (* We don't need to name these wires here since they are immediately used in the module
-     output, which is automatically named when instantiating with [hierarchical] *)
-    let is_in_range = Variable.wire ~default:gnd () in
-    let is_in_range_valid = Variable.wire ~default:gnd () in
+    let%hw_var is_in_range = Variable.wire ~default:gnd () in
+    let%hw_var is_in_range_valid = Variable.wire ~default:gnd () in
     let ready = Variable.wire ~default:gnd () in
     (* TODO: It would be great to verify formally or with property testing that ready and is_in_range_valid are never high at the same time. *)
     compile
@@ -74,7 +72,8 @@ module Make (Config : Config) = struct
           [ ( Idle
             , [ when_
                   (i.enable &: i.id.valid)
-                  [ sm.set_next FirstIteration; id <-- i.id.value; ready <-- vdd ]
+                  [ sm.set_next FirstIteration; id <-- i.id.value ]
+              ; ready <-- vdd
               ] )
           ; ( FirstIteration (* Assumes we have at least one range to check. *)
             , [ when_

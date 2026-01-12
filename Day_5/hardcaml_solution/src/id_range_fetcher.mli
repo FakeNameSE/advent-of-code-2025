@@ -5,6 +5,9 @@
     needs to roll over when it hits the maximum index rather than signaling that it is
     done.
 
+    This circuit will store the max_id_range_idx when enable is first set, and use it
+    until it is cleared or possibly reset. This is all the enable does.
+
     Note that because this assumes the memory we are controlling is synchronous, the read
     for an ID range will produce an updated value on the next clock cycle. For simplicity,
     this circuit outputs the index of the current range read out of memory in addition to
@@ -22,7 +25,9 @@ module Make (_ : Config) : sig
   module I : sig
     type 'a t =
       { clock : 'a
+      ; enable : 'a
       ; clear : 'a
+      ; max_id_range_idx : 'a
       }
     [@@deriving hardcaml]
   end
@@ -38,6 +43,5 @@ module Make (_ : Config) : sig
     [@@deriving hardcaml]
   end
 
-  val max_id_range_idx : int
   val hierarchical : Scope.t -> Signal.t I.t -> Signal.t O.t
 end

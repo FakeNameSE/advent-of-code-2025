@@ -11,17 +11,20 @@ module type Config = sig
 end
 
 module Make (Config : Config) = struct
+  let id_address_size = address_bits_for Config.id_mem_size_in_ids
+  let id_range_address_size = address_bits_for Config.id_range_mem_size_in_ranges
+  let num_ids_in_range_size = num_bits_to_represent Config.id_mem_size_in_ids
+
   module I = struct
     type 'a t =
       { clock : 'a
       ; clear : 'a
+      ; enable : 'a
+      ; max_id_idx : 'a [@bits id_address_size]
+      ; max_id_range_idx : 'a [@bits id_range_address_size]
       }
     [@@deriving hardcaml]
   end
-
-  let id_address_size = address_bits_for Config.id_mem_size_in_ids
-  let id_range_address_size = address_bits_for Config.id_range_mem_size_in_ranges
-  let num_ids_in_range_size = num_bits_to_represent Config.id_mem_size_in_ids
 
   module O = struct
     (* TODO: Set output counter to the minimum number of bits required to represent all of the ids. 
@@ -50,7 +53,11 @@ module Make (Config : Config) = struct
     let id_fetcher =
       Id_fetcher.hierarchical
         scope
-        { Id_fetcher.I.clock = i.clock; clear = i.clear; enable = fetch_next_id }
+        { Id_fetcher.I.clock = i.clock
+        ; clear = i.clear
+        ; enable = fetch_next_id
+        ; max_id_idx = i.max_id_idx
+        }
     in
     let id_ram_read_port =
       { Read_port.read_clock = id_fetcher.read_clock
@@ -80,7 +87,7 @@ module Make (Config : Config) = struct
     let id_range_fetcher =
       Id_range_fetcher.hierarchical
         scope
-        { Id_range_fetcher.I.clock = i.clock; clear = i.clear }
+        { Id_range_fetcher.I.clock = i.clock; clear = i.clear; enable = i.enable; max_id_range_idx = i.max_id_range_idx }
     in
     let id_range_ram_read_port =
       { Read_port.read_clock = id_range_fetcher.read_clock
@@ -113,7 +120,7 @@ module Make (Config : Config) = struct
         scope
         { Execution_unit.I.clock = i.clock
         ; clear = i.clear
-        ; enable = vdd
+        ; enable = i.enable
         ; id = { With_valid.valid = id_fetcher.id_is_valid; value = fetched_id }
         ; id_range =
             { valid = id_range_fetcher.id_range_is_valid
@@ -121,7 +128,7 @@ module Make (Config : Config) = struct
             }
         }
     in
-    Signal.(fetch_next_id <-- execution_unit_1.ready);
+    Signal.(fetch_next_id <-- (execution_unit_1.ready &: i.enable));
     let next_num_ids_in_range old_num_ids_in_range =
       mux
         (execution_unit_1.is_in_range.valid &: execution_unit_1.is_in_range.value)
