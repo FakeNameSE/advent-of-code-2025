@@ -38,6 +38,7 @@ module Make (Config : Config) = struct
     (* Doing this in the Always DSL is a little gross, but the nested if seems cleaner than messing with muxes. *)
     let open Always in
     let%hw_var id_range_idx = Variable.reg spec ~width:Config.id_range_address_size in
+    let%hw_var next_id_range_idx = Variable.wire ~default:id_range_idx.value () in
     let%hw_var max_id_range_idx_reg =
       Variable.reg spec ~width:Config.id_range_address_size
     in
@@ -51,19 +52,23 @@ module Make (Config : Config) = struct
           module_initialized
           [ if_
               (id_range_idx.value ==: max_id_range_idx_reg.value)
-              [ id_range_idx <--. 0 ]
-              [ id_range_idx <-- id_range_idx.value +:. 1 ]
+              [ next_id_range_idx <--. 0 ]
+              [ next_id_range_idx <-- id_range_idx.value +:. 1 ]
           ]
       ; when_
           (i.enable &: ~:(max_id_range_idx_reg_is_valid.value))
           [ max_id_range_idx_reg <-- i.max_id_range_idx
           ; max_id_range_idx_reg_is_valid <-- vdd
           ]
+        (* Do this ugly thing where we use the wire as the output to avoid an extra cycle delay on initialization. 
+        This might not seem like it would matter, but if we get unlucky with when this falls related to the ID fetcher, 
+        having the same ID range for two cycles breaks the invariant our Execution Engine relies on, causing it to terminate early. *)
+      ; id_range_idx <-- next_id_range_idx.value
       ];
-    let%hw delayed_idx = pipeline ~n:1 spec id_range_idx.value in
+    let%hw delayed_idx = pipeline ~n:1 spec next_id_range_idx.value in
     (* Plumb wires to output. *)
     { O.read_clock = i.clock
-    ; read_address = id_range_idx.value
+    ; read_address = next_id_range_idx.value
     ; read_enable = vdd
     ; id_range_is_valid = module_initialized
     ; curr_id_range_idx = delayed_idx

@@ -63,7 +63,7 @@ module Make (Config : Config) = struct
     let%hw_var init_range_idx = Variable.reg spec ~width:(width i.id_range.value.idx) in
     let%hw_var is_in_range = Variable.wire ~default:gnd () in
     let%hw_var is_in_range_valid = Variable.wire ~default:gnd () in
-    let ready = Variable.wire ~default:gnd () in
+    let%hw_var ready = Variable.wire ~default:gnd () in
     (* TODO: It would be great to verify formally or with property testing that ready and is_in_range_valid are never high at the same time. *)
     compile
       [ is_in_range
