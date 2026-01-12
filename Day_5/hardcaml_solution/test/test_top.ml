@@ -74,6 +74,7 @@ let testbench (sim : Sim.t) : Waveform.t =
     Cyclesim.cycle sim;
     num_cycles := !num_cycles + 1
   done;
+  
   (* Wait one more cycle to be safe. *)
   Cyclesim.cycle sim;
   printf
