@@ -1,13 +1,13 @@
 # Notes on Rough Edges I Ran Into While Learning Hardcaml
 
-As a hobbyist Ocaml and FPGA developer, I had a great time picking up Hardcaml. It solves a lot of the unpleasantness of Verilog and VHDL. The notes below are not criticism, just some of the hurdles I ran into trying to get a design off the ground.
+As a hobbyist Ocaml and FPGA developer, I had a great time picking up Hardcaml! It solves a lot of the unpleasantness of Verilog and VHDL. The notes below are not criticism, just some of the hurdles I ran into trying to get a design off the ground.
 
 ## Possible Bug
-When I run `dune test` (including with the template project), dune seems to be rerunning my tests about 12 or 13 times. With hyperthreading I have 16 cores, so I am not sure if there is some sort of concurrency bug. This made tests which print ASCII waveforms to the terminal pretty annoying to run. I am unsure if this issue is related to OxCaml, dune, or something else. My project was based on the template linked from the Hardcaml repository, so I do not think the issue is my own project configuration.  
+When I run `dune test` (including with the template project) on my Linux system, dune seems to be rerunning my tests about 12 or 13 times. With hyperthreading I have 16 cores, so I am not sure if there is some sort of concurrency bug. This made tests which print ASCII waveforms to the terminal pretty annoying to run. I am unsure if this issue is related to OxCaml, dune, or something else. My project was based on the template linked from the Hardcaml repository, so I do not think the issue is my own project configuration.  
 
-## Missing Memory Documentation
-- Missing good way to initialize RAM, multiport primitive technically supports passing `?initialize_to`, but undocumented and not exposed from Ram module. Also clunky because the passed data has to exactly match the memory size.
-- Had to look in source to find how RAM data width is determined. Possibly because everyone is using Xilinx lib, which also does not support initializing RAM.
+## Missing Memory Documentation and Other Difficulties
+- Missing good way to initialize RAM. Multiport primitive technically supports passing `?initialize_to`, but undocumented and not exposed from Ram module. Also clunky because the passed data has to exactly match the memory size.
+- Had to look in source to find that RAM data width is determined from write ports, which is a bit odd. Possibly because everyone is using Xilinx lib, which also does not support initializing RAM.
 - Also, what is size for memory? Number of words, bytes, ...?
 - Likely ignorance on my part, but could not figure out how to use Read_port.t as nested interface for a module.
 

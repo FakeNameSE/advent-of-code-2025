@@ -3,6 +3,9 @@ open! Hardcaml
 open! Hardcaml_waveterm
 open! Hardcaml_test_harness
 
+(* TODO: Clean this up a lot. *)
+(* TODO: Consider property testing with randomized generation of larger inputs.  *)
+
 let ( <--. ) = Bits.( <--. )
 
 module Top = Hardcaml_advent_of_code_day_5.Top.Make (struct
@@ -45,8 +48,7 @@ let initialize_memories
     (fun i -> assign_mem id_range_ram ~address:i (i + 400))
     (Seq.init 1000 (fun x -> x)) *)
 
-let testbench (sim : Sim.t) : Waveform.t =
-  let parsed_input = Parse_input.Parse.parse_challenge_input "inputs/input.txt" in
+let testbench (sim : Sim.t) (parsed_input : Parse_input.Parse.Parsed_input.t) =
   let waves, sim = Waveform.create sim in
   (* Useful for getting the mangled names of internal signals. *)
   (* let traced = Cyclesim.traced sim in
@@ -75,29 +77,45 @@ let testbench (sim : Sim.t) : Waveform.t =
     Cyclesim.cycle sim;
     num_cycles := !num_cycles + 1
   done;
-
   (* Wait one more cycle to be safe. *)
   Cyclesim.cycle sim;
   printf
     "Number of ids in range: %d, computation took roughly %d cycles.\n"
     (Bits.to_unsigned_int !(o.num_ids_in_range.value))
     !num_cycles;
-  waves
+  o, waves
 ;;
 
 let sim = create_sim ()
 
-(* let waves = testbench sim;;
-Waveform.print waves;; *)
-
-let save_waves sim =
+let run_and_save_waves sim parsed_input =
   let filename = "/tmp/top_waves.vcd" in
   let oc = Stdlib.Out_channel.open_text filename in
   let sim = Vcd.wrap oc sim in
-  let _ = testbench sim in
+  let o, _waves = testbench sim parsed_input in
   (* Closing the out channel will ensure the file is flushed to disk *)
   Out_channel.close oc;
-  Stdio.print_endline ("Saved waves to " ^ filename)
+  Stdio.print_endline ("Saved waves to " ^ filename);
+  o
 ;;
 
-save_waves sim
+let test input_path =
+  (* Compare module output to software solution. *)
+  let parsed_input = Parse_input.Parse.parse_challenge_input input_path in
+  let output, _ = testbench sim parsed_input in
+  let num_ids_in_range = Bits.to_unsigned_int !(output.num_ids_in_range.value) in
+  let expected_num_ids_in_range = Software_solution.Solution.solve_part_1 parsed_input in
+  num_ids_in_range = expected_num_ids_in_range
+;;
+
+let%test "smallest_input" = test "inputs/small_input.txt"
+let%test "fairly_small_input" = test "inputs/own_input.txt"
+
+(* Change path here to generate waveform for a given input. 
+You will needs to edit the deps clause in the test dune file if you want to reference a new file here. *)
+let _ =
+  Parse_input.Parse.parse_challenge_input "inputs/own_input.txt" |> run_and_save_waves sim
+;;
+
+(* let waves = testbench sim;;
+Waveform.print waves;; *)

@@ -4,10 +4,11 @@
   core
   hardcaml
   hardcaml_advent_of_code_day_5
+  software_solution
   hardcaml_test_harness
   hardcaml_waveterm
   re)
  (preprocess
   (pps ppx_hardcaml ppx_jane))
  (inline_tests
-  (deps ./inputs/input.txt)))
+  (deps ./inputs/own_input.txt ./inputs/small_input.txt)))

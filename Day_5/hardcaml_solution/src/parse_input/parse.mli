@@ -12,6 +12,8 @@ module Parsed_input : sig
     }
 end
 
+val is_id_in_range : Parsed_input.id -> Parsed_input.id_range -> bool 
+
 val parse_input_channel : in_channel -> Parsed_input.t
 
 (** Takes file path to input file as string. *)

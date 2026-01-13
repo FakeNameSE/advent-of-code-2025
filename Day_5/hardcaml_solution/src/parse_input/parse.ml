@@ -15,6 +15,11 @@ module Parsed_input = struct
     }
 end
 
+let is_id_in_range (Parsed_input.Id id) id_range =
+  let Parsed_input.{ lower_bound = Id l; upper_bound = Id u } = id_range in
+  id >= l && id <= u
+;;
+
 (* TODO: Parser breaks for ints larger than what Ocaml int can fit. 
 If we are serious about parameterizing the widths, should find a solution for that. *)
 let parse_input_channel ic =
