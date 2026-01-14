@@ -21,7 +21,6 @@ module Make (_ : Config) : sig
     [@@deriving hardcaml]
   end
 
-  (* TODO: Figure out the type magic that makes this produce the right type signature. *)
   module Id_range_with_valid : With_valid.Wrap.M(Id_range).S
 
   module I : sig
